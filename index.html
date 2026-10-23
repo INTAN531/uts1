@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Komentar & Ulasan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header & Navigation -->
+    <header class="bg-indigo-600 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-indigo-500 rounded-lg">
+                        <i class="fa-solid me-1 fa-comments text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">DataKomentar Pro</h1>
+                        <p class="text-xs text-indigo-200">Aplikasi Pengelolaan & Scraping Ulasan</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button id="btn-open-token-modal" class="flex items-center space-x-2 bg-indigo-700 hover:bg-indigo-800 text-xs sm:text-sm px-3 py-2 rounded-lg transition duration-200 border border-indigo-500">
+                        <i class="fa-solid fa-key text-amber-300"></i>
+                        <span class="hidden sm:inline">Konfigurasi</span> Apify Token
+                    </button>
+                    <button id="btn-export-json" class="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm px-3 py-2 rounded-lg transition duration-200">
+                        <i class="fa-solid fa-download"></i>
+                        <span class="hidden md:inline">Ekspor Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Top Stats / Alert Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Total Komentar</p>
+                    <p id="stat-total" class="text-2xl font-bold text-indigo-600">0</p>
+                </div>
+                <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Platform Terhubung</p>
+                    <p id="stat-sources" class="text-2xl font-bold text-sky-600">0</p>
+                </div>
+                <div class="w-10 h-10 bg-sky-50 text-sky-600 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-globe"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Status Apify Integration</p>
+                    <span id="stat-token-badge" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 mt-1">
+                        <i class="fa-solid fa-circle text-[8px] mr-1 text-green-500"></i> Aktif
+                    </span>
+                </div>
+                <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-plug"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <button id="btn-add-comment" class="w-full h-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg flex items-center justify-center space-x-2 transition shadow-sm">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <span>Tambah Data Baru</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <!-- Search Box -->
+            <div class="relative w-full md:w-96">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="input-search" placeholder="Cari nama, akun, atau isi komentar..." 
+                       class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+            </div>
+
+            <!-- Action Filters -->
+            <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                <select id="select-sort" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <option value="newest">Terbaru</option>
+                    <option value="oldest">Terlama</option>
+                    <option value="name-asc">Nama (A-Z)</option>
+                    <option value="name-desc">Nama (Z-A)</option>
+                </select>
+                <button id="btn-reset-demo" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-medium transition" title="Muat Data Contoh">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Reset Demo
+                </button>
+            </div>
+        </div>
+
+        <!-- Data Content Area -->
+        <!-- Toggle View: Table / Cards -->
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-slate-700 font-semibold text-lg flex items-center space-x-2">
+                <span>Daftar Komentar</span>
+                <span id="data-count-badge" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">0 items</span>
+            </h2>
+            <div class="flex bg-slate-200 p-1 rounded-lg">
+                <button id="view-table-btn" class="px-3 py-1 text-xs rounded-md font-medium bg-white text-slate-800 shadow-sm transition">
+                    <i class="fa-solid fa-list mr-1"></i> Tabel
+                </button>
+                <button id="view-grid-btn" class="px-3 py-1 text-xs rounded-md font-medium text-slate-600 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-border-all mr-1"></i> Kartu
+                </button>
+            </div>
+        </div>
+
+        <!-- View Mode: Table -->
+        <div id="container-table" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                            <th class="px-6 py-3">Pengguna & Akun</th>
+                            <th class="px-6 py-3">Isi Komentar</th>
+                            <th class="px-6 py-3">Sumber / Link</th>
+                            <th class="px-6 py-3">Tanggal</th>
+                            <th class="px-6 py-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Rows rendered via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Empty State inside table -->
+            <div id="table-empty-state" class="hidden text-center py-12">
+                <i class="fa-regular fa-folder-open text-4xl text-slate-300 mb-3"></i>
+                <p class="text-slate-500 font-medium">Tidak ada data komentar ditemukan.</p>
+                <p class="text-xs text-slate-400 mt-1">Coba sesuaikan pencarian atau tambah komentar baru.</p>
+            </div>
+        </div>
+
+        <!-- View Mode: Grid Cards -->
+        <div id="container-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <!-- Cards rendered via JavaScript -->
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            <p>&copy; 2026 DataKomentar Pro. Aplikasi CRUD Manajemen Komentar & Integrasi Apify.</p>
+        </div>
+    </footer>
+
+    <!-- MODAL 1: Form Tambah / Edit Komentar -->
+    <div id="modal-form" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-95 duration-200 modal-card">
+            <div class="bg-indigo-600 px-6 py-4 text-white flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-lg">Tambah Komentar Baru</h3>
+                <button type="button" class="btn-close-modal text-white/80 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="comment-form" class="p-6 space-y-4">
+                <input type="hidden" id="field-id">
+                
+                <div>
+                    <label for="field-name" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                    <input type="text" id="field-name" required placeholder="Contoh: Budi Santoso"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label for="field-account" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Akun / Username <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">@</span>
+                        <input type="text" id="field-account" required placeholder="budisanto"
+                               class="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="field-comment" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Isi Komentar / Ulasan <span class="text-red-500">*</span></label>
+                    <textarea id="field-comment" rows="4" required placeholder="Tulis komentar atau ulasan di sini..."
+                              class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label for="field-url" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Link Sumber URL <span class="text-red-500">*</span></label>
+                    <input type="url" id="field-url" required placeholder="https://instagram.com/p/xxx atau https://twitter.com/..."
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3">
+                    <button type="button" class="btn-close-modal px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
+                        Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Detail Komentar -->
+    <div id="modal-detail" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden transform transition-all scale-95 duration-200 modal-card">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div id="detail-avatar" class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                            U
+                        </div>
+                        <div>
+                            <h3 id="detail-name" class="font-bold text-slate-800 text-base">Nama User</h3>
+                            <p id="detail-account" class="text-xs text-indigo-600 font-medium">@username</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close-detail text-slate-400 hover:text-slate-600 text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p class="text-xs font-semibold text-slate-400 uppercase mb-1">Isi Komentar</p>
+                    <p id="detail-comment" class="text-slate-700 text-sm whitespace-pre-line leading-relaxed">
+                        Content...
+                    </p>
+                </div>
+
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-400">Link Sumber:</span>
+                        <a id="detail-url" href="#" target="_blank" class="text-indigo-600 hover:underline font-medium truncate max-w-[200px]">Link</a>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400">Waktu Ditambahkan:</span>
+                        <span id="detail-date" class="text-slate-600 font-medium">12 Oct 2026</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="button" class="btn-close-detail px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Apify Token Configuration -->
+    <div id="modal-token" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-95 duration-200 modal-card">
+            <div class="bg-slate-800 px-6 py-4 text-white flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-gear text-amber-400"></i>
+                    <h3 class="font-bold text-lg">Konfigurasi API Token Apify</h3>
+                </div>
+                <button type="button" class="btn-close-token text-white/80 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Token ini digunakan untuk otentikasi integrasi scraping data ulasan/komentar otomatis menggunakan <strong>Apify Actors</strong>.
+                </p>
+
+                <div>
+                    <label for="input-apify-token" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Apify API Token</label>
+                    <div class="relative">
+                        <input type="password" id="input-apify-token" 
+                               class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                        <button type="button" id="btn-toggle-token-visibility" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold">Informasi Keamanan</p>
+                        <p class="mt-0.5">Token disimpan secara lokal di peramban Anda (LocalStorage). Jangan berikan token ini kepada pihak tidak terpercaya.</p>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-between items-center">
+                    <button type="button" id="btn-copy-token" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center space-x-1">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Salin Token</span>
+                    </button>
+                    <div class="space-x-2">
+                        <button type="button" class="btn-close-token px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+                            Tutup
+                        </button>
+                        <button type="button" id="btn-save-token" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium shadow-sm transition">
+                            Simpan Token
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-3 pointer-events-none">
+        <div id="toast-icon" class="text-emerald-400"><i class="fa-solid fa-circle-check text-lg"></i></div>
+        <div id="toast-message" class="text-xs font-medium">Pesan notifikasi</div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- CONSTANTS & INITIAL STATE ---
+        const DEFAULT_TOKEN = "apify_api_ivdGR7WxBs3Mtt8smvX9EzVj0Bo82a25BcGW";
+        const STORAGE_KEY_DATA = "crud_comments_data_v1";
+        const STORAGE_KEY_TOKEN = "crud_apify_token_v1";
+
+        // Initial Dummy Data
+        const SAMPLE_DATA = [
+            {
+                id: "cmt-1",
+                name: "Rian Anggoro",
+                account: "rian_anggoro",
+                comment: "Produk ini sangat bagus, pengiriman cepat dan kemasan rapi sekali. Sangat direkomendasikan!",
+                sourceUrl: "https://instagram.com/p/Cz123456789",
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: "cmt-2",
+                name: "Siti Rahmawati",
+                account: "siti_rahma",
+                comment: "Layanan pelanggan sangat responsif ketika saya menanyakan kendala pesanan.",
+                sourceUrl: "https://twitter.com/siti_rahma/status/1234567890",
+                createdAt: new Date(Date.now() - 86400000).toISOString()
+            },
+            {
+                id: "cmt-3",
+                name: "Dewi Lestari",
+                account: "dewilestari_off",
+                comment: "Kualitas lumayan bagus sesuai harga. Fiturnya bekerja dengan baik tanpa kendala.",
+                sourceUrl: "https://facebook.com/reviews/post/987654321",
+                createdAt: new Date(Date.now() - 172800000).toISOString()
+            }
+        ];
+
+        let comments = [];
+        let activeView = 'table'; // 'table' or 'grid'
+
+        // --- DOM ELEMENTS ---
+        const tableBody = document.getElementById('table-body');
+        const containerGrid = document.getElementById('container-grid');
+        const containerTable = document.getElementById('container-table');
+        const emptyState = document.getElementById('table-empty-state');
+        const inputSearch = document.getElementById('input-search');
+        const selectSort = document.getElementById('select-sort');
+        const dataCountBadge = document.getElementById('data-count-badge');
+        
+        // Stat elements
+        const statTotal = document.getElementById('stat-total');
+        const statSources = document.getElementById('stat-sources');
+
+        // Form Modal Elements
+        const modalForm = document.getElementById('modal-form');
+        const commentForm = document.getElementById('comment-form');
+        const modalTitle = document.getElementById('modal-title');
+        const fieldId = document.getElementById('field-id');
+        const fieldName = document.getElementById('field-name');
+        const fieldAccount = document.getElementById('field-account');
+        const fieldComment = document.getElementById('field-comment');
+        const fieldUrl = document.getElementById('field-url');
+
+        // Detail Modal Elements
+        const modalDetail = document.getElementById('modal-detail');
+        const detailAvatar = document.getElementById('detail-avatar');
+        const detailName = document.getElementById('detail-name');
+        const detailAccount = document.getElementById('detail-account');
+        const detailComment = document.getElementById('detail-comment');
+        const detailUrl = document.getElementById('detail-url');
+        const detailDate = document.getElementById('detail-date');
+
+        // Token Modal Elements
+        const modalToken = document.getElementById('modal-token');
+        const inputApifyToken = document.getElementById('input-apify-token');
+        const btnToggleTokenVisibility = document.getElementById('btn-toggle-token-visibility');
+        const btnSaveToken = document.getElementById('btn-save-token');
+        const btnCopyToken = document.getElementById('btn-copy-token');
+
+        // View Toggles
+        const viewTableBtn = document.getElementById('view-table-btn');
+        const viewGridBtn = document.getElementById('view-grid-btn');
+
+        // Toast
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            initToken();
+            loadComments();
+            setupEventListeners();
+            render();
+        };
+
+        // Initialize Token in LocalStorage if not present
+        function initToken() {
+            if (!localStorage.getItem(STORAGE_KEY_TOKEN)) {
+                localStorage.setItem(STORAGE_KEY_TOKEN, DEFAULT_TOKEN);
+            }
+            inputApifyToken.value = localStorage.getItem(STORAGE_KEY_TOKEN);
+        }
+
+        // Load comments from LocalStorage
+        function loadComments() {
+            const stored = localStorage.getItem(STORAGE_KEY_DATA);
+            if (stored) {
+                try {
+                    comments = JSON.parse(stored);
+                } catch (e) {
+                    comments = [...SAMPLE_DATA];
+                }
+            } else {
+                comments = [...SAMPLE_DATA];
+                saveComments();
+            }
+        }
+
+        // Save comments to LocalStorage
+        function saveComments() {
+            localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(comments));
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Add Modal Opener
+            document.getElementById('btn-add-comment').addEventListener('click', () => openFormModal());
+
+            // Modal Close Buttons
+            document.querySelectorAll('.btn-close-modal').forEach(btn => {
+                btn.addEventListener('click', () => closeModal(modalForm));
+            });
+            document.querySelectorAll('.btn-close-detail').forEach(btn => {
+                btn.addEventListener('click', () => closeModal(modalDetail));
+            });
+            document.querySelectorAll('.btn-close-token').forEach(btn => {
+                btn.addEventListener('click', () => closeModal(modalToken));
+            });
+
+            // Form Submission (Create / Update)
+            commentForm.addEventListener('submit', handleFormSubmit);
+
+            // Search and Sort Filter
+            inputSearch.addEventListener('input', render);
+            selectSort.addEventListener('change', render);
+
+            // Reset Demo Data
+            document.getElementById('btn-reset-demo').addEventListener('click', () => {
+                if (confirm('Apakah Anda yakin ingin mengembalikan data ke sampel awal? Data saat ini akan ditimpa.')) {
+                    comments = [...SAMPLE_DATA];
+                    saveComments();
+                    render();
+                    showToast('Data demo berhasil dimuat ulang!');
+                }
+            });
+
+            // Export JSON
+            document.getElementById('btn-export-json').addEventListener('click', exportDataJSON);
+
+            // Apify Token Modal Open
+            document.getElementById('btn-open-token-modal').addEventListener('click', () => {
+                inputApifyToken.value = localStorage.getItem(STORAGE_KEY_TOKEN) || DEFAULT_TOKEN;
+                openModal(modalToken);
+            });
+
+            // Toggle Token Visibility
+            btnToggleTokenVisibility.addEventListener('click', () => {
+                const isPassword = inputApifyToken.type === 'password';
+                inputApifyToken.type = isPassword ? 'text' : 'password';
+                btnToggleTokenVisibility.innerHTML = isPassword ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+            });
+
+            // Save Token
+            btnSaveToken.addEventListener('click', () => {
+                const val = inputApifyToken.value.trim();
+                if (!val) {
+                    showToast('Token tidak boleh kosong!', 'error');
+                    return;
+                }
+                localStorage.setItem(STORAGE_KEY_TOKEN, val);
+                closeModal(modalToken);
+                showToast('Token Apify berhasil disimpan!');
+            });
+
+            // Copy Token
+            btnCopyToken.addEventListener('click', () => {
+                const tokenVal = inputApifyToken.value;
+                copyToClipboard(tokenVal);
+                showToast('Token tersalin ke papan klip!');
+            });
+
+            // View Mode Switching
+            viewTableBtn.addEventListener('click', () => switchView('table'));
+            viewGridBtn.addEventListener('click', () => switchView('grid'));
+        }
+
+        // --- RENDER LOGIC ---
+        function getFilteredComments() {
+            const query = inputSearch.value.toLowerCase().trim();
+            const sortOption = selectSort.value;
+
+            // Filter
+            let filtered = comments.filter(item => {
+                return (
+                    item.name.toLowerCase().includes(query) ||
+                    item.account.toLowerCase().includes(query) ||
+                    item.comment.toLowerCase().includes(query)
+                );
+            });
+
+            // Sort
+            filtered.sort((a, b) => {
+                if (sortOption === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+                if (sortOption === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+                if (sortOption === 'name-asc') return a.name.localeCompare(b.name);
+                if (sortOption === 'name-desc') return b.name.localeCompare(a.name);
+                return 0;
+            });
+
+            return filtered;
+        }
+
+        function render() {
+            const filtered = getFilteredComments();
+            
+            // Update Stats
+            statTotal.textContent = comments.length;
+            dataCountBadge.textContent = `${filtered.length} items`;
+
+            const uniqueDomains = new Set(comments.map(c => {
+                try {
+                    return new URL(c.sourceUrl).hostname;
+                } catch(e) {
+                    return 'other';
+                }
+            }));
+            statSources.textContent = uniqueDomains.size;
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = '';
+                containerGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            // Render Table
+            tableBody.innerHTML = filtered.map(item => `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                ${getInitials(item.name)}
+                            </div>
+                            <div class="truncate max-w-[160px]">
+                                <div class="font-semibold text-slate-800 truncate">${escapeHTML(item.name)}</div>
+                                <div class="text-xs text-slate-400">@${escapeHTML(item.account)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-slate-600 line-clamp-2 max-w-md text-xs leading-relaxed">
+                            "${escapeHTML(item.comment)}"
+                        </p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="${escapeHTML(item.sourceUrl)}" target="_blank" rel="noopener noreferrer" 
+                           class="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800 font-medium space-x-1 bg-indigo-50 px-2.5 py-1 rounded-md max-w-[150px] truncate">
+                            <i class="fa-solid fa-link text-[10px]"></i>
+                            <span class="truncate">${cleanUrlDisplay(item.sourceUrl)}</span>
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
+                        ${formatDate(item.createdAt)}
+                    </td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center space-x-2">
+                            <button onclick="openDetailModal('${item.id}')" title="Lihat Detail" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-md hover:bg-slate-100 transition">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button onclick="openFormModal('${item.id}')" title="Edit Data" class="p-1.5 text-slate-500 hover:text-amber-600 rounded-md hover:bg-slate-100 transition">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteComment('${item.id}')" title="Hapus" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-md hover:bg-slate-100 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Render Cards Grid
+            containerGrid.innerHTML = filtered.map(item => `
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
+                                    ${getInitials(item.name)}
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-sm truncate max-w-[150px]">${escapeHTML(item.name)}</h3>
+                                    <p class="text-xs text-slate-400">@${escapeHTML(item.account)}</p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                                ${formatDateShort(item.createdAt)}
+                            </span>
+                        </div>
+                        <p class="text-slate-600 text-xs leading-relaxed mb-4 line-clamp-3">
+                            "${escapeHTML(item.comment)}"
+                        </p>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <a href="${escapeHTML(item.sourceUrl)}" target="_blank" rel="noopener noreferrer" 
+                           class="text-xs text-indigo-600 hover:underline truncate max-w-[140px] flex items-center space-x-1">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <span>${cleanUrlDisplay(item.sourceUrl)}</span>
+                        </a>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="openDetailModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button onclick="openFormModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-amber-600 rounded">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteComment('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Switch View Modes
+        function switchView(view) {
+            activeView = view;
+            if (view === 'table') {
+                containerTable.classList.remove('hidden');
+                containerGrid.classList.add('hidden');
+                viewTableBtn.className = 'px-3 py-1 text-xs rounded-md font-medium bg-white text-slate-800 shadow-sm transition';
+                viewGridBtn.className = 'px-3 py-1 text-xs rounded-md font-medium text-slate-600 hover:text-slate-900 transition';
+            } else {
+                containerTable.classList.add('hidden');
+                containerGrid.classList.remove('hidden');
+                viewGridBtn.className = 'px-3 py-1 text-xs rounded-md font-medium bg-white text-slate-800 shadow-sm transition';
+                viewTableBtn.className = 'px-3 py-1 text-xs rounded-md font-medium text-slate-600 hover:text-slate-900 transition';
+            }
+        }
+
+        // --- CRUD OPERATIONS ---
+
+        // Open Form Modal (Add / Edit)
+        function openFormModal(id = null) {
+            commentForm.reset();
+            if (id) {
+                const item = comments.find(c => c.id === id);
+                if (!item) return;
+                modalTitle.textContent = 'Edit Data Komentar';
+                fieldId.value = item.id;
+                fieldName.value = item.name;
+                fieldAccount.value = item.account;
+                fieldComment.value = item.comment;
+                fieldUrl.value = item.sourceUrl;
+            } else {
+                modalTitle.textContent = 'Tambah Komentar Baru';
+                fieldId.value = '';
+            }
+            openModal(modalForm);
+        }
+
+        // Form Submit Handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const id = fieldId.value;
+            const name = fieldName.value.trim();
+            const account = fieldAccount.value.trim().replace(/^@/, ''); // Remove leading @ if typed
+            const comment = fieldComment.value.trim();
+            const sourceUrl = fieldUrl.value.trim();
+
+            if (!name || !account || !comment || !sourceUrl) {
+                showToast('Mohon lengkapi seluruh field formulir!', 'error');
+                return;
+            }
+
+            if (id) {
+                // Edit / Update
+                const index = comments.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    comments[index] = {
+                        ...comments[index],
+                        name,
+                        account,
+                        comment,
+                        sourceUrl
+                    };
+                    showToast('Data komentar berhasil diperbarui!');
+                }
+            } else {
+                // Create New
+                const newItem = {
+                    id: 'cmt-' + Date.now(),
+                    name,
+                    account,
+                    comment,
+                    sourceUrl,
+                    createdAt: new Date().toISOString()
+                };
+                comments.unshift(newItem);
+                showToast('Komentar baru berhasil ditambahkan!');
+            }
+
+            saveComments();
+            render();
+            closeModal(modalForm);
+        }
+
+        // Open Detail Modal
+        function openDetailModal(id) {
+            const item = comments.find(c => c.id === id);
+            if (!item) return;
+
+            detailAvatar.textContent = getInitials(item.name);
+            detailName.textContent = item.name;
+            detailAccount.textContent = `@${item.account}`;
+            detailComment.textContent = item.comment;
+            detailUrl.href = item.sourceUrl;
+            detailUrl.textContent = item.sourceUrl;
+            detailDate.textContent = formatDate(item.createdAt);
+
+            openModal(modalDetail);
+        }
+
+        // Delete Comment
+        function deleteComment(id) {
+            const item = comments.find(c => c.id === id);
+            if (!item) return;
+
+            if (confirm(`Apakah Anda yakin ingin menghapus komentar dari "${item.name}"?`)) {
+                comments = comments.filter(c => c.id !== id);
+                saveComments();
+                render();
+                showToast('Data komentar telah dihapus.', 'info');
+            }
+        }
+
+        // --- EXPORT FUNCTIONALITY ---
+        function exportDataJSON() {
+            if (comments.length === 0) {
+                showToast('Tidak ada data untuk diekspor!', 'error');
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(comments, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `komentar_export_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('Ekspor data JSON berhasil diunduh!');
+        }
+
+        // --- HELPER UTILITIES ---
+        function openModal(modalEl) {
+            modalEl.classList.remove('hidden');
+            setTimeout(() => {
+                modalEl.classList.remove('opacity-0');
+                const card = modalEl.querySelector('.modal-card');
+                if(card) {
+                    card.classList.remove('scale-95');
+                    card.classList.add('scale-100');
+                }
+            }, 10);
+        }
+
+        function closeModal(modalEl) {
+            modalEl.classList.add('opacity-0');
+            const card = modalEl.querySelector('.modal-card');
+            if(card) {
+                card.classList.remove('scale-100');
+                card.classList.add('scale-95');
+            }
+            setTimeout(() => {
+                modalEl.classList.add('hidden');
+            }, 200);
+        }
+
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            const iconEl = document.getElementById('toast-icon');
+
+            if (type === 'error') {
+                iconEl.className = 'text-rose-400';
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-xmark text-lg"></i>';
+            } else if (type === 'info') {
+                iconEl.className = 'text-sky-400';
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-info text-lg"></i>';
+            } else {
+                iconEl.className = 'text-emerald-400';
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-check text-lg"></i>';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function getInitials(name) {
+            if (!name) return 'U';
+            const parts = name.trim().split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function formatDate(isoString) {
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch(e) {
+                return isoString;
+            }
+        }
+
+        function formatDateShort(isoString) {
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short'
+                });
+            } catch(e) {
+                return '';
+            }
+        }
+
+        function cleanUrlDisplay(url) {
+            try {
+                const parsed = new URL(url);
+                return parsed.hostname + parsed.pathname;
+            } catch(e) {
+                return url;
+            }
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+    </script>
+</body>
+</html>
